@@ -1,0 +1,66 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.*cache
+.venv
+
+# temporal
+models
+tmp
+*.zip
+testset/inshop/
+testset/street2shop/
+train/docs/
+train/experiments.md
+train/*.log
+train/outputs/
+
+# earlier GLAMI-task leftovers (kept locally), trainset/ and minor helpers: not part of the paper repo
+trainset/
+test/make_figures.py
+test/inshop-official/
+test/street2shop-glami/
+train/conf/exp22.yaml
+
+# private
+NOTE.md
+PLAN.md
+.env
+report/*
+
+# editor (machine-specific paths)
+.vscode/
+
+# paper build (paper/paper.pdf and paper/fig/*.pdf are tracked)
+paper/*.aux
+paper/*.bbl
+paper/*.bst
+paper/*.md
+paper/*.blg
+paper/*.fdb_latexmk
+paper/*.fls
+paper/*.log
+paper/*.out
+paper/*.synctex.gz
+test/*/results.md
+
+# regenerable results: rank logs of test/metrics.py (test/inshop/logs.csv cannot be regenerated: its data was removed)
+test/street/logs.csv
+test/street-input/logs.csv
+test/street-extra/logs.csv
+
+# run artifacts
+train/*.done
+wandb/
+
+# large artifacts (embeddings, indexes, weights)
+*.npz
+*.npy
+*.faiss
+*.safetensors
+*.pt
+*.pth

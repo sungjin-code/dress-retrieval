@@ -1,0 +1,12 @@
+{
+  "seed": 42,
+  "fig1_queries": [
+    "street/000012056",
+    "street/000009899"
+  ],
+  "fig3_query": "street/000015470",
+  "fig1_rule": "SigLIP2 top-1 wrong, ours top-1 right, small dress (lowest size tercile)",
+  "fig3_rule": "ours original wrong, ours crop right, ours mask(white) wrong, small dress",
+  "fig1_pool": 155,
+  "fig3_pool": 18
+}

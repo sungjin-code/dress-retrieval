@@ -1,0 +1,38 @@
+# street4-nopretrain (full config) = ablation of street4: init_adapter null: the same street training started from base SigLIP2 (no shop pre-train), a fresh LoRA from cfg.lora. (HP search: street1 0.8680, street2 0.8714, street3 0.8578, street4 0.8726 val R@1). Every other value is identical to street4.
+model_dir: models/siglip2-base-patch16-224
+init_adapter: null   # no shop pre-train
+
+data:
+  train_csv: testset/street2shop/train.csv   # made by tools/hard_split.py (after tools/street2shop.py); photos + annotated product boxes x0 y0 x1 y1
+  val_csv: testset/street2shop/val.csv
+  image_dir: testset/street2shop
+  max_train: null                       # cap train rows (smoke tests)
+
+train:
+  epochs: 20
+  batch_size: 32        # items per batch (2 photos each)
+  repeats: 2            # passes over the items per epoch (the photo pair is re-sampled each pass)
+  lr: 2.0e-5
+  weight_decay: 0.3
+  temperature: 0.05
+  warmup_ratio: 0.05
+  patience: 5           # validations without R@1 improvement before stopping
+  num_workers: 4
+  bbox: {weight: 0.3}
+  color_jitter: {brightness: 0.6, contrast: 0.6, saturation: 0.6, hue: 0.0}
+
+lora:
+  r: 32
+  alpha: 64
+  dropout: 0.3
+  target_modules: 'vision_model\.encoder\.layers\.\d+\.(self_attn\.(q_proj|k_proj|v_proj|out_proj)|mlp\.(fc1|fc2))'
+
+wandb:
+  project: dress-search
+  mode: online          # online | offline | disabled
+
+hydra:
+  job:
+    chdir: false
+  run:
+    dir: train/outputs/street4-nopretrain_${now:%Y-%m-%d_%H-%M-%S}

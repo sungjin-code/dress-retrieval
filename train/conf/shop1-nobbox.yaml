@@ -1,0 +1,41 @@
+# shop1-nobbox (full config) = ablation of shop1: train.bbox.weight 0.0 (shop1: 0.3), i.e. no bbox head / loss in the shop pre-train. Every other value is identical to shop1.
+#   (lr 5e-5, temperature 0.05, colour jitter 0.6, bbox head 0.3 on OWLv2 boxes, LoRA r32 / dropout 0.3, batch 24 items). Early stopping / checkpoint on the STREET val split.
+#   The street runs (streetN.yaml) start from this run's best adapter + bbox head (init_adapter).
+model_dir: models/siglip2-base-patch16-224
+
+data:
+  train_csv: testset/street2shop/shop_pretrain.csv   # shop photos minus the val/test items (tools/hard_split.py)
+  bbox_csv: testset/street2shop/shop_bbox.csv       # OWLv2 boxes (train/detect.py); shop photos have no annotated box
+  min_dress_score: 0.01
+  val_csv: testset/street2shop/val.csv     # street val: how far shop-only training transfers to street
+  image_dir: testset/street2shop
+  max_train: null                       # cap train rows (smoke tests)
+
+train:
+  epochs: 20
+  batch_size: 24        # items per batch (2 photos each)
+  repeats: 2            # passes over the items per epoch (the photo pair is re-sampled each pass)
+  lr: 5.0e-5
+  weight_decay: 0.3
+  temperature: 0.05
+  warmup_ratio: 0.05
+  patience: 5           # validations without R@1 improvement before stopping
+  num_workers: 4
+  bbox: {weight: 0.0}
+  color_jitter: {brightness: 0.6, contrast: 0.6, saturation: 0.6, hue: 0.0}
+
+lora:
+  r: 32
+  alpha: 64
+  dropout: 0.3
+  target_modules: 'vision_model\.encoder\.layers\.\d+\.(self_attn\.(q_proj|k_proj|v_proj|out_proj)|mlp\.(fc1|fc2))'
+
+wandb:
+  project: dress-search
+  mode: online          # online | offline | disabled
+
+hydra:
+  job:
+    chdir: false
+  run:
+    dir: train/outputs/shop1-nobbox_${now:%Y-%m-%d_%H-%M-%S}

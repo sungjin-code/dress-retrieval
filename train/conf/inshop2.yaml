@@ -1,0 +1,41 @@
+# inshop2 (full config) = inshop1 with train.temperature 0.05 -> 0.02 (inshop1: best val R@1 0.9567, epoch 7, early stop step 960). inshop1 was the first In-Shop run: image<->image InfoNCE on In-Shop Dresses (train/train_pairs.py), exp15 recipe (LoRA r32, colour jitter 0.6, bbox head 0.3, LoRA dropout 0.3).
+#   Differences vs exp15 (GLAMI image<->text): temperature 0.007 -> 0.05 (image-image similarities are far less peaked than text-image), batch 24 items = 48 photos.
+#   Data: tools/hard_split.py --root testset/inshop - the 300 hardest In-Shop Dresses items for base SigLIP2 are split into val (150 items, early stopping on all-vs-all R@1, base 0.780) and test (150 items, test/metrics.py, base 0.712); the other 974 items are train.
+model_dir: models/siglip2-base-patch16-224
+
+data:
+  train_csv: testset/inshop/train.csv   # made by tools/hard_split.py --root testset/inshop
+  val_csv: testset/inshop/val.csv
+  bbox_csv: testset/inshop/bbox.csv     # made by train/detect.py
+  image_dir: testset/inshop
+  min_dress_score: 0.01                 # photos with a lower OWLv2 dress_score are dropped (every run, so ablations see the same photos)
+  max_train: null                       # cap train rows (smoke tests)
+
+train:
+  epochs: 20
+  batch_size: 24        # items per batch (2 photos each)
+  repeats: 2            # passes over the items per epoch (the photo pair is re-sampled each pass)
+  lr: 1.0e-4
+  weight_decay: 0.3
+  temperature: 0.02
+  warmup_ratio: 0.05
+  patience: 5           # validations without R@1 improvement before stopping
+  num_workers: 4
+  bbox: {weight: 0.3}
+  color_jitter: {brightness: 0.6, contrast: 0.6, saturation: 0.6, hue: 0.0}
+
+lora:
+  r: 32
+  alpha: 64
+  dropout: 0.3
+  target_modules: 'vision_model\.encoder\.layers\.\d+\.(self_attn\.(q_proj|k_proj|v_proj|out_proj)|mlp\.(fc1|fc2))'
+
+wandb:
+  project: dress-search
+  mode: online          # online | offline | disabled
+
+hydra:
+  job:
+    chdir: false
+  run:
+    dir: train/outputs/inshop2_${now:%Y-%m-%d_%H-%M-%S}

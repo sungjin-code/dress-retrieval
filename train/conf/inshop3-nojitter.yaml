@@ -1,0 +1,42 @@
+# inshop3-nojitter (full config) = ablation of the final In-Shop config inshop3 (HP search: inshop1 0.9567, inshop2 0.9455, inshop3 0.9567 val R@1): train.color_jitter all 0.0 (inshop3: 0.6/0.6/0.6). Isolates the effect of colour jitter. Every other value is identical to inshop3.
+# inshop3 (full config) = inshop1 with train.lr 1e-4 -> 5e-5 (inshop1: best val R@1 0.9567; inshop2 = temperature 0.02: 0.9455, worse, so temperature stays 0.05). inshop1 was the first In-Shop run: image<->image InfoNCE on In-Shop Dresses (train/train_pairs.py), exp15 recipe (LoRA r32, colour jitter 0.6, bbox head 0.3, LoRA dropout 0.3).
+#   Differences vs exp15 (GLAMI image<->text): temperature 0.007 -> 0.05 (image-image similarities are far less peaked than text-image), batch 24 items = 48 photos.
+#   Data: tools/hard_split.py --root testset/inshop - the 300 hardest In-Shop Dresses items for base SigLIP2 are split into val (150 items, early stopping on all-vs-all R@1, base 0.780) and test (150 items, test/metrics.py, base 0.712); the other 974 items are train.
+model_dir: models/siglip2-base-patch16-224
+
+data:
+  train_csv: testset/inshop/train.csv   # made by tools/hard_split.py --root testset/inshop
+  val_csv: testset/inshop/val.csv
+  bbox_csv: testset/inshop/bbox.csv     # made by train/detect.py
+  image_dir: testset/inshop
+  min_dress_score: 0.01                 # photos with a lower OWLv2 dress_score are dropped (every run, so ablations see the same photos)
+  max_train: null                       # cap train rows (smoke tests)
+
+train:
+  epochs: 20
+  batch_size: 24        # items per batch (2 photos each)
+  repeats: 2            # passes over the items per epoch (the photo pair is re-sampled each pass)
+  lr: 5.0e-5
+  weight_decay: 0.3
+  temperature: 0.05
+  warmup_ratio: 0.05
+  patience: 5           # validations without R@1 improvement before stopping
+  num_workers: 4
+  bbox: {weight: 0.3}
+  color_jitter: {brightness: 0.0, contrast: 0.0, saturation: 0.0, hue: 0.0}
+
+lora:
+  r: 32
+  alpha: 64
+  dropout: 0.3
+  target_modules: 'vision_model\.encoder\.layers\.\d+\.(self_attn\.(q_proj|k_proj|v_proj|out_proj)|mlp\.(fc1|fc2))'
+
+wandb:
+  project: dress-search
+  mode: online          # online | offline | disabled
+
+hydra:
+  job:
+    chdir: false
+  run:
+    dir: train/outputs/inshop3-nojitter_${now:%Y-%m-%d_%H-%M-%S}

@@ -1,0 +1,39 @@
+# street3 (full config) = street2 with train.temperature 0.05 -> 0.1 (street2: lr 2e-5, best val R@1 0.8714 at epoch 11 vs street1 0.8680). street2 was street1 with train.lr 5e-5 -> 2e-5 (street1: best val R@1 0.8680 at epoch 4, then a plateau ~0.86 = overfitting on 1,292 items, so smaller steps from the shop1 init). street1 was the first Street2Shop street run (train/train_pairs.py), started from the shop1 pre-train (init_adapter): image<->image InfoNCE between two street photos of the same product, inshop3 values (lr 5e-5, temperature 0.05, colour jitter 0.6, bbox head 0.3 with the annotated product boxes, LoRA r32 / dropout 0.3, batch 24 items).
+#   Data: tools/street2shop.py + tools/hard_split.py - the 300 hardest items for base SigLIP2 are split into val (150 items, early stopping on all-vs-all R@1) and test (150 items, test/metrics.py); every other item is train.
+model_dir: models/siglip2-base-patch16-224
+init_adapter: train/outputs/shop1_2026-11-13_22-06-47/best   # shop1 pre-train best adapter + bbox head (street val R@1 0.8146)
+
+data:
+  train_csv: testset/street2shop/train.csv   # made by tools/hard_split.py (after tools/street2shop.py); photos + annotated product boxes x0 y0 x1 y1
+  val_csv: testset/street2shop/val.csv
+  image_dir: testset/street2shop
+  max_train: null                       # cap train rows (smoke tests)
+
+train:
+  epochs: 20
+  batch_size: 24        # items per batch (2 photos each)
+  repeats: 2            # passes over the items per epoch (the photo pair is re-sampled each pass)
+  lr: 2.0e-5
+  weight_decay: 0.3
+  temperature: 0.1
+  warmup_ratio: 0.05
+  patience: 5           # validations without R@1 improvement before stopping
+  num_workers: 4
+  bbox: {weight: 0.3}
+  color_jitter: {brightness: 0.6, contrast: 0.6, saturation: 0.6, hue: 0.0}
+
+lora:
+  r: 32
+  alpha: 64
+  dropout: 0.3
+  target_modules: 'vision_model\.encoder\.layers\.\d+\.(self_attn\.(q_proj|k_proj|v_proj|out_proj)|mlp\.(fc1|fc2))'
+
+wandb:
+  project: dress-search
+  mode: online          # online | offline | disabled
+
+hydra:
+  job:
+    chdir: false
+  run:
+    dir: train/outputs/street3_${now:%Y-%m-%d_%H-%M-%S}

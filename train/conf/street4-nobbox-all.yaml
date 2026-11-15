@@ -1,0 +1,38 @@
+# street4-nobbox-all (full config) = ablation of street4: bbox weight 0.0 in BOTH stages (init from shop1-nobbox, which has no bbox head). Every other value is identical to street4.
+model_dir: models/siglip2-base-patch16-224
+init_adapter: SHOP1_NOBBOX_BEST
+
+data:
+  train_csv: testset/street2shop/train.csv   # made by tools/hard_split.py (after tools/street2shop.py); photos + annotated product boxes x0 y0 x1 y1
+  val_csv: testset/street2shop/val.csv
+  image_dir: testset/street2shop
+  max_train: null                       # cap train rows (smoke tests)
+
+train:
+  epochs: 20
+  batch_size: 32        # items per batch (2 photos each)
+  repeats: 2            # passes over the items per epoch (the photo pair is re-sampled each pass)
+  lr: 2.0e-5
+  weight_decay: 0.3
+  temperature: 0.05
+  warmup_ratio: 0.05
+  patience: 5           # validations without R@1 improvement before stopping
+  num_workers: 4
+  bbox: {weight: 0.0}
+  color_jitter: {brightness: 0.6, contrast: 0.6, saturation: 0.6, hue: 0.0}
+
+lora:
+  r: 32
+  alpha: 64
+  dropout: 0.3
+  target_modules: 'vision_model\.encoder\.layers\.\d+\.(self_attn\.(q_proj|k_proj|v_proj|out_proj)|mlp\.(fc1|fc2))'
+
+wandb:
+  project: dress-search
+  mode: online          # online | offline | disabled
+
+hydra:
+  job:
+    chdir: false
+  run:
+    dir: train/outputs/street4-nobbox-all_${now:%Y-%m-%d_%H-%M-%S}
